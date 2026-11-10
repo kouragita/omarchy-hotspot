@@ -70,7 +70,7 @@ have to hold — you share a network that lives on a machine you control:
 ### Manual (human)
 
 ```bash
-git clone https://github.com/<you>/omarchy-hotspot.git
+git clone https://github.com/kouragita/omarchy-hotspot.git
 cd omarchy-hotspot
 sudo ./install.sh          # or: pkexec ./install.sh
 systemctl start omarchy-hotspot.service

@@ -1,0 +1,30 @@
+#!/bin/sh
+# Generate the share QR from the hotspot config.
+#
+# The SSID and password may contain any printable character, so they must be
+# escaped for the WIFI: scheme before they go into the payload: backslash,
+# semicolon, comma, colon and double quote are the delimiters that matter.
+# A name like "Omarchy </>~" is legal in 802.11 and must not break the QR.
+set -u
+
+CFG="${1:-$HOME/.config/omarchy-hotspot/config}"
+OUT="${2:-$HOME/.cache/omarchy-hotspot/qr.png}"
+
+SS=$(sed -n 's/^SSID=//p' "$CFG" | head -1)
+PS=$(sed -n 's/^PASS=//p' "$CFG" | head -1)
+
+# Refuse to emit a half-populated payload (this is what once produced
+# "WIFI:T:WPA;S:omarchy-share;P:;;", which phones silently ignore).
+[ -n "$SS" ] && [ -n "$PS" ] || exit 3
+
+esc() {
+  printf '%s' "$1" | sed \
+    -e 's/\\/\\\\/g' \
+    -e 's/;/\\;/g' \
+    -e 's/,/\\,/g' \
+    -e 's/:/\\:/g' \
+    -e 's/"/\\"/g'
+}
+
+mkdir -p "$(dirname "$OUT")" || exit 1
+exec qrencode -o "$OUT" -s 6 -m 3 -t PNG "WIFI:T:WPA;S:$(esc "$SS");P:$(esc "$PS");;"

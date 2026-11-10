@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "kouragita.hotspot",
+  "name": "Hotspot",
+  "version": "0.3.0",
+  "author": "kouragita",
+  "license": "MIT",
+  "description": "Tabbed hotspot manager: status and share QR, rename and password, traffic, addresses and devices.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Hotspot",
+    "description": "Hotspot on/off with a tabbed manager for the share QR, password, traffic, addresses and devices.",
+    "category": "Network",
+    "aliases": [
+      "hotspot",
+      "tether",
+      "ap"
+    ],
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

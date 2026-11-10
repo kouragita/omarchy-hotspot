@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Print (and QR-encode) the tunnel command that reaches the loopback-only
+# WhatsApp bridge from a phone on the hotspot.
+#
+# Why a tunnel instead of rebinding the bridge:
+#   the bridge listens on 127.0.0.1 because it has NO authentication. SSH has
+#   authentication. Putting an authenticating hop in front keeps the bridge's
+#   trust boundary intact and adds encryption on the local network, instead of
+#   deleting two security controls to expose an unauthenticated control surface.
+set -uo pipefail
+
+HOST="${1:-10.42.0.1}"
+PORT="${2:-3000}"
+WHO="${USER:-kouragita}"
+
+CMD="ssh -N -L ${PORT}:127.0.0.1:${PORT} ${WHO}@${HOST}"
+
+cat <<EOF
+Hotspot uplink check : $(ip -4 -o addr show dev ap0 2>/dev/null | awk '{print $4}' || echo 'ap0 down')
+Bridge reachable at  : 127.0.0.1:${PORT} (this machine only, by design)
+
+On the phone (Termux), run:
+
+    ${CMD}
+
+Then open on the phone:
+
+    http://localhost:${PORT}
+
+Notes
+  * The tunnel dies when the phone sleeps - re-run the one line.
+  * Nothing is exposed on the hotspot itself except port 22 (authenticated).
+  * To stop exposing SSH to hotspot clients entirely:
+        sudo ufw delete allow in on ap0 to 10.42.0.1 port 22 proto tcp
+EOF
+
+echo
+if command -v qrencode >/dev/null 2>&1; then
+  echo "Scan to copy the command to the phone:"
+  qrencode -t ANSIUTF8 "$CMD"
+fi

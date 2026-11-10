@@ -1,0 +1,17 @@
+# Agent and editor state must never be published.
+.pi/
+.agents/
+AGENTS.md
+AGENTS.override.md
+CLAUDE.md
+
+# Local machine specifics
+*.local
+*.bak
+*.log
+
+# Editor / OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp

@@ -1,0 +1,39 @@
+table ip hotspot {
+	chain postrouting {
+		type nat hook postrouting priority srcnat; policy accept;
+		ip saddr 10.42.0.0/24 oifname "wlp2s0" counter masquerade
+	}
+
+	chain forward {
+		type filter hook forward priority filter + 5; policy accept;
+
+		# MSS clamp. MUST be the first rule: nftables stops evaluating a chain at
+		# an `accept`, so placing this after the accepts would never run.
+		#
+		# The uplink path MTU is 1492 (kernel route cache), but hotspot clients
+		# are told 1500, so they send 1500-byte segments that the uplink silently
+		# drops. PMTUD does not save them: the ICMP "fragmentation needed" is
+		# generated for the NATed address and unreliable across the client's NAT.
+		# Result: small requests (browsing) work, full-size transfers (downloads,
+		# app attachments) stall forever. 1452 = 1492 - 40 (IPv4 + TCP headers).
+		tcp flags & syn == syn tcp option maxseg size set 1452 counter
+
+		iifname "ap0" oifname "wlp2s0" counter accept
+		iifname "wlp2s0" oifname "ap0" ct state established,related counter accept
+	}
+
+	# The upstream hands us every inbound packet with TTL 1 (an anti-tethering
+	# clamp: inbound packets for this machine's own sockets arrive that way too,
+	# and they work because local delivery does not decrement TTL). Forwarding
+	# does decrement it, so without this rule ip_forward sees TTL 0 for every
+	# reply, emits ICMP time-exceeded, and clients are stuck at
+	# "connected, no internet" while DHCP and DNS still work.
+	#
+	# Priority -50 runs after de-NAT (dstnat+10 = -90) so the destination is
+	# already rewritten to the hotspot subnet, and before the routing/forward
+	# decrement. 64 is what the client expects to see.
+	chain ttlfix {
+		type filter hook prerouting priority -50; policy accept;
+		iifname "wlp2s0" ip daddr 10.42.0.0/24 ip ttl set 64 counter
+	}
+}

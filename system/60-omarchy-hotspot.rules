@@ -1,0 +1,14 @@
+// Allow the desktop user to start/stop exactly one unit, so the bar widget can
+// toggle the hotspot without a password prompt and without a sudoers grant.
+//
+// Deliberately narrow: one action id, one unit name, one user, and only from an
+// active local session. It grants no ability to edit the unit or run anything.
+polkit.addRule(function(action, subject) {
+  if (action.id == "org.freedesktop.systemd1.manage-units" &&
+      action.lookup("unit") == "omarchy-hotspot.service" &&
+      action.lookup("verb") != null &&
+      subject.user == "@USER@" &&
+      subject.local && subject.active) {
+    return polkit.Result.YES;
+  }
+});

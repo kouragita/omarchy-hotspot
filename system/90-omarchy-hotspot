@@ -1,0 +1,43 @@
+#!/bin/sh
+# NetworkManager dispatcher: keep the hotspot in sync with the uplink.
+#
+# Runs as root on every interface event. The user's intent lives in a flag file
+# they own, so turning the hotspot off is a plain file removal and never needs
+# privilege escalation.
+#
+# The flag is the ONLY thing that decides whether it comes back after a
+# reconnect. Deleting it is how "off" survives a reboot.
+
+IFACE="$1"
+ACTION="$2"
+
+HS_USER="${HS_USER:-@USER@}"
+FLAG="/home/${HS_USER}/.local/state/hotspot/enabled"
+UNIT="omarchy-hotspot.service"
+
+[ "$IFACE" = "wlp2s0" ] || exit 0
+
+case "$ACTION" in
+  up|dhcp4-change|connectivity-change)
+    [ -e "$FLAG" ] || exit 0
+
+    # iwlwifi allows only one channel across the phy, so roaming to a different
+    # channel silently breaks the AP while systemd still reports it "active".
+    # Compare the live uplink channel with the AP's and re-arm when they differ.
+    if systemctl is-active --quiet "$UNIT"; then
+      UP_CH=$(iw dev wlp2s0 info 2>/dev/null | sed -n 's/.*channel \([0-9][0-9]*\).*/\1/p')
+      AP_CH=$(iw dev ap0 info 2>/dev/null | sed -n 's/.*channel \([0-9][0-9]*\).*/\1/p')
+      if [ -n "$UP_CH" ] && [ -n "$AP_CH" ] && [ "$UP_CH" != "$AP_CH" ]; then
+        systemctl restart --no-block "$UNIT" >/dev/null 2>&1
+        exit 0
+      fi
+    fi
+
+    systemctl start --no-block "$UNIT" >/dev/null 2>&1
+    ;;
+  down|pre-down)
+    systemctl stop --no-block "$UNIT" >/dev/null 2>&1
+    ;;
+esac
+
+exit 0

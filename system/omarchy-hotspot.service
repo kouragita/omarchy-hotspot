@@ -1,0 +1,19 @@
+[Unit]
+Description=Omarchy concurrent Wi-Fi hotspot (AP+STA on wlp2s0)
+Documentation=file://@APPDIR@/apply.sh
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=@APPDIR@/apply.sh
+ExecStop=@APPDIR@/teardown.sh
+# If the uplink is unsuitable the script rolls back and exits non-zero; that is
+# a normal "cannot run right now" state, not a broken unit.
+TimeoutStartSec=90
+TimeoutStopSec=30
+
+[Install]
+# Deliberately no WantedBy: this unit is armed by the NetworkManager dispatcher
+# on association, never at boot when there may be no uplink at all.

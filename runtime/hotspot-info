@@ -1,0 +1,16 @@
+#!/bin/sh
+# key=value facts for the hotspot panel. Everything here is readable by the
+# desktop user, so the UI never needs elevation to display addresses.
+set -u
+AP="${1:-ap0}"
+UP="${2:-wlp2s0}"
+
+kv() { printf '%s=%s\n' "$1" "$2"; }
+
+kv gateway    "$(ip -4 -o addr show dev "$AP" 2>/dev/null | awk '{print $4}')"
+kv mtu        "$(cat "/sys/class/net/$AP/mtu" 2>/dev/null)"
+kv channel    "$(iw dev "$AP" info 2>/dev/null | sed -n 's/.*channel \([0-9][0-9]*\).*/\1/p')"
+kv ssid       "$(iw dev "$AP" info 2>/dev/null | sed -n 's/^[[:space:]]*ssid //p')"
+kv uplink_ip  "$(ip -4 -o addr show dev "$UP" 2>/dev/null | awk '{print $4}')"
+kv uplink_ssid "$(iw dev "$UP" link 2>/dev/null | sed -n 's/^[[:space:]]*SSID: //p')"
+kv uplink_gw  "$(ip route show default 2>/dev/null | awk '/^default/{print $3; exit}')"
